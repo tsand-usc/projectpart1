@@ -7,7 +7,7 @@ Person::Person(){ //DONE
 
 
 Person::~Person(){ //DONE
-    delete birthdate;
+   delete birthdate;
 	delete email;
 	delete phone; 
     // TODO: complete the method!
@@ -26,7 +26,7 @@ Person::Person(string fname, string lname, string bdate, string email, string ph
 
 	prev = NULL;
 	next = NULL;
-
+	// Quest / Tom - May need to add type for Email / Phone,according to phase 1 guide, however, it is not specified for person constructor prototype...
 }
 
 
@@ -136,20 +136,56 @@ bool Person::operator!=(const Person& rhs){  // DONE
 }
 
 
-void Person::print_person(){ // DONE 
-    // Already implemented for you! Do not change!
-	cout << l_name << ", " << f_name << endl;
-	//cout << "l_name: " << &l_name << endl;
-	//cout << "f_name: " << &f_name << endl;
-	birthdate->print_date("Month D, YYYY");
-	//cout << "BD: " << birthdate << endl;
-	email->print();
-	//cout << "email: " << email << endl;
-	phone->print();
-	//cout << "phone: " << phone << endl;
-	//cout << "SELF PTR: " << this << endl;
-	//cout << "NEXT: " << this->next << endl;
-	//cout << "PREV: " << this->prev << endl;
+void Person::addFriend(Person* newFriend)
+{
+	this->friends.push_back(newFriend);
 }
 
+
+void Person::print_person(){ // DONE 
+
+   // Already implemented for you! Do not change! 
+	cout << l_name << ", " << f_name << endl;
+	birthdate->print_date("Month D, YYYY");
+	email->print();
+	phone->print();
+
+	// Print friends.
+	for(vector<Person*>::iterator it = this->friends.begin(); it != this->friends.end(); it++)
+	{
+		string idname;
+		idname = (*it)->get_last_name() + (*it)->get_first_name();
+		idname.erase(remove(idname.begin(), idname.end(), ' '), idname.end()); 
+		transform(idname.begin(), idname.end(), idname.begin(), ::tolower);		
+		cout << idname << endl;
+	}
+}
+
+
+void Person::save_person(ofstream &outfile){
+                            
+   // written based on https://www.geeksforgeeks.org/io-redirection-c/ 
+	streambuf* stream_buffer_cout = cout.rdbuf();     // space for cout output
+	streambuf* stream_buffer_file = outfile.rdbuf();  // space for output to file
+	cout.rdbuf(stream_buffer_file);                   // send cout to the file stream
+
+	outfile << l_name << ", " << f_name << endl;
+	birthdate->print_date("Month D, YYYY");
+	email->print();
+	phone->print();
+
+	// Print friends.
+	for(vector<Person*>::iterator it = this->friends.begin(); it != this->friends.end(); it++)
+	{
+		string idname;
+		idname = (*it)->get_last_name() + (*it)->get_first_name();
+		idname.erase(remove(idname.begin(), idname.end(), ' '), idname.end()); 
+		transform(idname.begin(), idname.end(), idname.begin(), ::tolower);		
+		outfile << idname << endl;
+	}
+	outfile << "------------------------------" << endl;
+	
+	cout.rdbuf(stream_buffer_cout);                   // send cout back to cout, just in case
+	
+}
 

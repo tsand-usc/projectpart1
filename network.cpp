@@ -42,8 +42,8 @@ void Network::push_front(Person* newEntry) { //DONE
 		tail = newEntry;
 
 	head = newEntry;
-	std::cout << "NEW HEAD: " << head << endl;
-	std::cout << "NEW TAIL: " << tail << endl;
+	//std::cout << "NEW HEAD: " << head << endl;
+	//std::cout << "NEW TAIL: " << tail << endl;
 	count++;
 	
 }
@@ -77,27 +77,32 @@ void Network::printDB() { //DONE
 		ptr->print_person();
 		cout << "------------------------------" << endl;
 		ptr = ptr->next;
-		
 	}
 }
 
 
-void Network::saveDB(string filename) { // FIX THIS
-										// TODO: Complete this method!
-										// Saves the netwrok in file <filename>
-										// Note: The format of the output file is very abstract, just raw data
-										// Look at studentDB.db as a template
-										// Note: notice the intentional flaw in this code, as compared to the note mentioned in printDB, 
-										// now the one who is responsible for implementing Network should be aware of implementation of Person, not good! You will fix this in PA2.
-
-	std::ofstream outfile; // written based on https://www.geeksforgeeks.org/io-redirection-c/
-	outfile.open(filename.c_str()); // open the file 
-	streambuf* stream_buffer_cout = cout.rdbuf(); // space for cout output
-	streambuf* stream_buffer_file = outfile.rdbuf(); // space for output to file
-	cout.rdbuf(stream_buffer_file); // send cout to the file stream
-	printDB();					   // Will send to cout, so redirect to file 
-	outfile.close();				   // close the file 
-	cout.rdbuf(stream_buffer_cout); // send cout back to cout, just in case 
+void Network::saveDB(string filename) { 
+   
+   
+   std::ofstream outfile;                                             
+	outfile.open(filename.c_str());                   // open the file 
+	Person* ptr = head;                               // go to start of list
+	while(ptr != NULL) {                              // iterate through list
+		ptr->save_person(outfile);                     // save person to file
+		ptr = ptr->next;
+	}
+	outfile.close();				                       // close the file 
+   
+   /* // moved this inside of save_person
+	std::ofstream outfile;                            // written based on https://www.geeksforgeeks.org/io-redirection-c/
+	outfile.open(filename.c_str());                   // open the file 
+	streambuf* stream_buffer_cout = cout.rdbuf();     // space for cout output
+	streambuf* stream_buffer_file = outfile.rdbuf();  // space for output to file
+	cout.rdbuf(stream_buffer_file);                   // send cout to the file stream
+	printDB();					                          // Will send to cout, so redirect to file 
+	outfile.close();				                       // close the file 
+	cout.rdbuf(stream_buffer_cout);                   // send cout back to cout, just in case
+	*/
 }
 
 
@@ -123,9 +128,14 @@ void Network::loadDB(string filename) { // DO THIS
 	string buff, fname, lname, bdate;
 	string phone, email; 
    Person * newEntry = NULL; 
+   deque< deque<string> > idList; 
+   
 	// TODO: Declare other variables if needed
-
+   
 	while (getline(infile, buff)) {
+	 
+	   idList.push_front(deque<string>()); 
+	   
 		lname = buff.substr(0, buff.find(',')); // read last name
 		fname = buff.substr(buff.find(',') + 2);// read first name
 		
@@ -180,19 +190,38 @@ void Network::loadDB(string filename) { // DO THIS
 			   break;
 		   }
 	   }
-      buff.clear(); 
-		// this line is to read the dash line
-		getline(infile, buff);
+       
 		// TODO: use the constructor Person::Person(fname, lname, bdate, email, phone) to modify the following line
 		
 		newEntry = new Person(fname, lname, bdate, email, phone);
 
 		this->push_front(newEntry);
-		newEntry->print_person();
+		
 		phone.clear();
 		email.clear(); 
-      buff.clear();  
+      buff.clear(); 
+      
+      getline(infile, buff); 
+      while(buff.at(0) != '-'){ // make new list for each entry 
+         idList.front().push_back(buff);          // add friend ids ot the list
+         buff.clear(); 
+         getline(infile, buff);
+         if(buff == ""){
+            break; 
+         }
+         //cout << "BUFF:" << buff << endl;                        
+      }
+      //newEntry->print_person();
 	}
+	
+	for(Person * entry = head; entry != NULL; entry = entry->next){ // look through each person in the list
+	   while(!idList.front().empty()){                                    // while their list of friends is not empty
+	      entry->addFriend(search(idList.front().front()));               // add the friend
+	      idList.front().pop_front();                                     // remove added person
+	   } 
+	   idList.pop_front();                                                // when list is empty remove it
+	}
+	infile.close(); 
 }
 
 Person* Network::search(string fname, string lname, string bdate) { 
@@ -223,6 +252,91 @@ Person* Network::search(string fname, string lname, string bdate) {
 	delete searchEntry; 
 	return NULL;
 }
+
+Person* Network::search(string queryid) 
+{ 																	
+	bool exit = false;	
+	Person *ptr = head;
+
+	while (!exit) {
+		if (check_idname(queryid, ptr)) {
+			return ptr;
+		}
+		else {
+			if ((ptr->next != NULL) && (ptr != ptr->next)) {
+				ptr = ptr->next;
+			}
+			else {
+				exit = true;
+			}
+		}
+	}
+	return NULL;
+}
+
+void Network::friends_recommendations(int k){
+
+	deque<Person *> list; 
+	deque<Person *> nextLevel; 
+	vector<Person *> visited;
+	vector<Person *> recom;
+	
+	if(head == NULL){ // no one is in the database
+	   cout << "No one in the database" << endl; 
+		return; 
+	}
+	
+	for(Person * entry0 = head; entry0 != NULL; entry0 = entry0->next){ // iterate over each person
+		
+ 		visited.push_back(entry0); 						 // Adds person to visited so they dont see themselves
+		for(int i = 0; i < entry0->friends.size(); i++){ // fills visited list with people who are already friends
+			visited.push_back(entry0->friends[i]); 
+		}
+		
+		
+		// generate recommendations
+		list.clear(); 
+		list.push_back(entry0);								   // add checking person to list
+		for(int level = 0; level <= k; level++){ 			// iterate over the levels
+		   
+			for(int i = 0; i < list.size(); i++){
+			   for(int j = 0; j < visited.size(); j++){
+			      if(list[i] == visited[j]){
+			         break;  
+			      }else if(j == (visited.size()-1)){ 
+			         recom.push_back(list[i]);
+			         visited.push_back(list[i]);
+			      } 
+			   }
+			}
+			
+			while(!list.empty()){										// look through every person in the list
+            
+				for(int l = 0; l < list.front()->friends.size(); l++){  // take the first person and look through their friends
+					nextLevel.push_back(list.front()->friends[l]);      // add the friends to the list of people at the next level
+				}
+				list.pop_front();										// remove the person from the list  
+			}  
+			list = nextLevel; 											// set the new friends to the new list of people to check
+			nextLevel.clear(); 											// reset to be filled next loop
+		}
+		
+		// print and reset for next loop
+		string idname;
+		cout << "----------------------------------" << endl;
+		cout << "For " << entry0->get_last_name() << ", " << entry0->get_first_name() << endl;  
+		for(int h = 0; h < recom.size(); h++){
+		   idname = recom[h]->get_last_name() + recom[h]->get_first_name();
+		   //idname.erase(remove(idname.begin(), idname.end(), ' '), idname.end()); 
+		   transform(idname.begin(), idname.end(), idname.begin(), ::tolower);		
+		   cout << idname << endl; 	
+		}
+		cout << "----------------------------------" << endl;
+		
+		visited.clear();	   // reset visited list
+		recom.clear(); 		   // reset recommendations	
+	}
+} 
 
 bool Network::remove(string fname, string lname, string bdate) { // DO THIS
 																 // TODO: Complete this method! Follow these steps:
@@ -270,7 +384,8 @@ void Network::showMenu() {
 		cout << "4. Search \n";
 		cout << "5. Remove a person \n";
 		cout << "6. Print database \n";
-
+		cout << "7. Add friends\n";
+		cout << "8. Find New Friends\n"; 
 		cout << "\nSelect an option ... ";
 
 		if (cin >> opt) {
@@ -424,7 +539,62 @@ void Network::showMenu() {
 			cout << "Network Database: \n";
 			printDB();
 		}
-		else {
+		else if (opt == 7)
+		{
+			string person_1_id, person_2_id;
+			cout << "Person 1 ID:";			
+			cin >> person_1_id;
+			cout << endl;
+			Person* p1 = search(person_1_id);
+			if(p1 == NULL)
+			{
+				cout << "Person is not found!\n";
+			}
+			else
+			{
+				cout << "Person 2 ID:";			
+				cin >> person_2_id;
+				cout << endl;
+				Person* p2 = search(person_2_id);
+				if(p2 == NULL)
+				{
+					cout << "Person is not found!\n";				
+				}
+				/* If both persons exist, call addFriend to add 
+					the other person to its friends vector. 
+					You should do so for person 1 and person 2. */
+				else
+				{
+					p1->addFriend(p2);
+					p2->addFriend(p1);
+
+					p1->print_person();
+					p2->print_person();
+					// Testing search and addFriend. This could be made into a helper function in misc.cpp...
+					// To implement in misc.cpp, must remove circular dependency with person.h.
+					// vector<Person*> friends = p1->friends;
+					// for(vector<Person*>::iterator it = friends.begin(); it != friends.end(); it++)
+					// {
+					// 	(*it)->print_person();
+					// }
+
+					// friends = p2->friends;
+					// for(vector<Person*>::iterator it = friends.begin(); it != friends.end(); it++)
+					// {
+					// 	(*it)->print_person();
+					// }
+				}
+			}				
+			
+		}else if(opt == 8){
+		
+		   int k; 
+		   cout << "Friend Recommendations" << endl;
+		   cout << "Search Level: ";
+		   cin >> k; 
+		   friends_recommendations(k); 
+		
+		}else {
 			cout << "Nothing matched!\n";
 		}
 

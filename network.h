@@ -7,6 +7,9 @@
 // You may need to add more libraries 
 #include <stdlib.h>
 #include <vector>
+#include <deque>
+#include "misc.h"
+
 class Network{
 
     private:
@@ -16,6 +19,8 @@ class Network{
         Person* tail;
         int count; 
         Person* search(string fname, string lname, string bdate);
+        // Phase II
+        Person* search(string queryid);
 
     public:
         Network();
@@ -28,7 +33,9 @@ class Network{
         void loadDB(string filename);
         void printDB();
         void showMenu();
+        void friends_recommendations(int k); 
+
+        
 };
 
 #endif
-

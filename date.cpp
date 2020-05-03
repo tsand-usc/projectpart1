@@ -162,4 +162,3 @@ string Date::get_date(){
     return str;
 }
 
-
