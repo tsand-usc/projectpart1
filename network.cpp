@@ -299,13 +299,13 @@ void Network::friends_recommendations(int k){
 		list.push_back(entry0);								   // add checking person to list
 		for(int level = 0; level <= k; level++){ 			// iterate over the levels
 		   
-			for(int i = 0; i < list.size(); i++){
-			   for(int j = 0; j < visited.size(); j++){
-			      if(list[i] == visited[j]){
+			for(int i = 0; i < list.size(); i++){        // look through list of people
+			   for(int j = 0; j < visited.size(); j++){  // look through visited node list
+			      if(list[i] == visited[j]){             // compare the people
 			         break;  
-			      }else if(j == (visited.size()-1)){ 
-			         recom.push_back(list[i]);
-			         visited.push_back(list[i]);
+			      }else if(j == (visited.size()-1)){     // if it makes it to the end and it was not visited
+			         recom.push_back(list[i]);           // add it to the recommendations
+			         visited.push_back(list[i]);         // add it to visited
 			      } 
 			   }
 			}
